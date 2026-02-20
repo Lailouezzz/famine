@@ -1,0 +1,14 @@
+# Buil/d system
+Makefile.cfg
+
+# Binary
+build/
+famine
+woody
+
+# clangd
+.cache/
+compile_commands.json
+
+# nvim
+.nfs*
