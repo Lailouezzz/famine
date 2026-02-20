@@ -67,21 +67,29 @@ int			elf_manager_load(
 		s->fd,
 		0
 	);
-	if (src == MAP_FAILED)
+	if (src == MAP_FAILED) {
+		close(s->fd);
 		return (EXIT_FAILURE);
+	}
 	s->data = mmap(nullptr,
 		s->size,
 		PROT_READ | PROT_WRITE,
 		MAP_PRIVATE | MAP_ANONYMOUS,
 		-1,
 		0);
-	if (s->data == MAP_FAILED)
+	if (s->data == MAP_FAILED) {
+		close(s->fd);
 		return (EXIT_FAILURE);
+	}
 	memcpy(s->data, src, s->size);
-	if (munmap(src, s->size))
+	if (munmap(src, s->size)) {
+		close(s->fd);
 		return (EXIT_FAILURE);
-	if (_validate_and_load(s))
+	}
+	if (_validate_and_load(s)) {
+		close(s->fd);
 		return (EXIT_FAILURE);
+	}
 	return (EXIT_SUCCESS);
 }
 
@@ -208,12 +216,16 @@ int		elf_manager_finalize(
 	if (s->fd != 0)
 		close(s->fd);
 	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0755);
-	if (fd < 0)
+	if (fd < 0) {
+		munmap(s->data, s->size);
 		return (EXIT_FAILURE);
+	}
 	r = write(fd, s->data, s->size);
 	close(fd);
-	if (r < 0 || r != (ssize_t)s->size)
+	if (r < 0 || r != (ssize_t)s->size) {
+		munmap(s->data, s->size);
 		return (EXIT_FAILURE);
+	}
 	if (munmap(s->data, s->size))
 		return (EXIT_FAILURE);
 	return (EXIT_SUCCESS);

