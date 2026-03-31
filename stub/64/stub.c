@@ -61,7 +61,11 @@ void *stub_main(void *stack)
 		(const char *)g_stub_data.stub32_vaddr,
 		(const char *)g_stub_data.stub32_vaddr + g_stub_data.stub32_len,
 		(const char *)g_stub_data.stub64_vaddr,
-		(const char *)g_stub_data.stub64_vaddr + g_stub_data.stub64_len);
+		(const char *)g_stub_data.stub64_vaddr + g_stub_data.stub64_len,
+		(const char *)g_stub_data.packer32_vaddr,
+		(const char *)g_stub_data.packer32_vaddr + g_stub_data.packer32_len,
+		(const char *)g_stub_data.packer64_vaddr,
+		(const char *)g_stub_data.packer64_vaddr + g_stub_data.packer64_len);
 	auxv = _auxv_from_stack(stack);
 	if (auxv == nullptr)
 		return (g_stub_data.entry_point + _base);

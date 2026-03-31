@@ -1,6 +1,6 @@
 /**
  * @file syscall.c
- * @brief 64-bit system call wrappers for freestanding stub.
+ * @brief 64-bit system call wrappers for freestanding packer.
  */
 
 // ---
@@ -11,13 +11,26 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <sys/types.h>
-#include <sys/syscall.h>
 
 #include "utils.h"
 
 // ---
 // Defines
 // ---
+
+#define SYS_READ 0
+#define SYS_WRITE 1
+#define SYS_OPEN 2
+#define SYS_CLOSE 3
+#define SYS_FSTAT 5
+#define SYS_LSEEK 8
+#define SYS_MMAP 9
+#define SYS_MPROTECT 10
+#define SYS_MUNMAP 11
+#define SYS_MREMAP 25
+#define SYS_MSYNC 26
+#define SYS_FTRUNCATE 77
+#define SYS_READLINK 89
 
 // ---
 // Static function declarations
@@ -37,12 +50,12 @@ static inline long syscall6(long n, long a1, long a2, long a3, long a4, long a5,
 
 ssize_t	read(int fd, char *buf, size_t size)
 {
-	return (ssize_t)syscall3(SYS_read, fd, (long)buf, size);
+	return (ssize_t)syscall3(SYS_READ, fd, (long)buf, size);
 }
 
 ssize_t	write(int fd, const char *buf, size_t size)
 {
-	return (ssize_t)syscall3(SYS_write, fd, (long)buf, size);
+	return (ssize_t)syscall3(SYS_WRITE, fd, (long)buf, size);
 }
 
 int	open(const char *path, int flags, ...)
@@ -54,34 +67,34 @@ int	open(const char *path, int flags, ...)
 		va_start(va, flags);
 		mode = va_arg(va, mode_t);
 		va_end(va);
-		return syscall3(SYS_open, (long)path, flags, mode);
+		return syscall3(SYS_OPEN, (long)path, flags, mode);
 	}
-	return syscall2(SYS_open, (long)path, flags);
+	return syscall2(SYS_OPEN, (long)path, flags);
 }
 
 int	close(int fd)
 {
-	return syscall1(SYS_close, fd);
+	return syscall1(SYS_CLOSE, fd);
 }
 
 void	*mmap(void *addr, size_t len, int prot, int flags, int fd, off_t off)
 {
-	return (void *)syscall6(SYS_mmap, (long)addr, len, prot, flags, fd, off);
+	return (void *)syscall6(SYS_MMAP, (long)addr, len, prot, flags, fd, off);
 }
 
 off_t	lseek(int fd, off_t off, int whence)
 {
-	return syscall3(SYS_lseek, fd, off, whence);
+	return syscall3(SYS_LSEEK, fd, off, whence);
 }
 
 int	munmap(void *addr, size_t len)
 {
-	return syscall2(SYS_munmap, (long)addr, len);
+	return syscall2(SYS_MUNMAP, (long)addr, len);
 }
 
 int	msync(void *addr, size_t len, int flags)
 {
-	return syscall3(SYS_msync, (long)addr, len, flags);
+	return syscall3(SYS_MSYNC, (long)addr, len, flags);
 }
 
 void	*mremap(void *old_addr, size_t old_size, size_t new_size, int flags, ...)
@@ -93,30 +106,25 @@ void	*mremap(void *old_addr, size_t old_size, size_t new_size, int flags, ...)
 		va_start(va, flags);
 		new_addr = va_arg(va, void *);
 		va_end(va);
-		return (void *)syscall5(SYS_mremap, (long)old_addr, old_size, new_size,
+		return (void *)syscall5(SYS_MREMAP, (long)old_addr, old_size, new_size,
 		    flags, (long)new_addr);
 	}
-	return (void *)syscall4(SYS_mremap, (long)old_addr, old_size, new_size, flags);
+	return (void *)syscall4(SYS_MREMAP, (long)old_addr, old_size, new_size, flags);
 }
 
 int	fstat(int fd, struct stat *st)
 {
-	return syscall2(SYS_fstat, fd, (long)st);
+	return syscall2(SYS_FSTAT, fd, (long)st);
 }
 
 ssize_t	readlink(const char *restrict path, char *buf, int bufsiz)
 {
-	return syscall3(SYS_readlink, (long)path, (long)buf, bufsiz);
+	return syscall3(SYS_READLINK, (long)path, (long)buf, bufsiz);
 }
 
 int	mprotect(void *addr, size_t size, int prot)
 {
-	return syscall3(SYS_mprotect, (long)addr, size, prot);
-}
-
-ssize_t getdents64(int fd, void *dirp, size_t count)
-{
-	return syscall3(SYS_getdents64, fd, (long)dirp, count);
+	return syscall3(SYS_MPROTECT, (long)addr, size, prot);
 }
 
 // ---

@@ -21,6 +21,41 @@
 // Defines
 // ---
 
+# ifdef _STUB_SOURCE
+
+#  include <sys/mman.h>
+#  define malloc(size)          stub_malloc(size)
+#  define realloc(ptr, size)    stub_realloc(ptr, size)
+#  define free(ptr)             stub_free(ptr)
+
+static inline void *stub_malloc(size_t size) {
+	size_t total = size + sizeof(size_t);
+	void *p = (void *)mmap(nullptr, total,
+		0x3, 0x22, -1, 0);
+	if (p == (void *)-1) return nullptr;
+	*(size_t *)p = total;
+	return (char *)p + sizeof(size_t);
+}
+
+static inline void *stub_realloc(void *ptr, size_t size) {
+	if (!ptr) return stub_malloc(size);
+	size_t total = size + sizeof(size_t);
+	void *base = (char *)ptr - sizeof(size_t);
+	size_t old_total = *(size_t *)base;
+	void *p = (void *)mremap(base, old_total, total, 1);
+	if (p == (void *)-1) return nullptr;
+	*(size_t *)p = total;
+	return (char *)p + sizeof(size_t);
+}
+
+static inline void stub_free(void *ptr) {
+	if (!ptr) return;
+	void *base = (char *)ptr - sizeof(size_t);
+	munmap(base, *(size_t *)base);
+}
+
+# endif
+
 /**
  * @brief Generic dynamic list structure.
  * @param T Element type.

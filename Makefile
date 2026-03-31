@@ -168,6 +168,35 @@ comma := ,
 $(RESDIR)/stub64.bin: $(OBJDIR)/stub64.o
 	$(call bcmd,ld,$^,$(LD) -nostdlib -Wl$(comma)--oformat=binary -T stub/64/linker.ld $^ -o $@ -z noexecstack)
 
+# Make the packer64 asm
+
+$(OBJDIR)/stub/packer64/%.S.o: stub/packer64/%.S
+	$(call qcmd,$(MKDIR) -p $(@D))
+	$(call bcmd,as,$<,$(AS) $< -o $@)
+
+# Make the packer64 C
+
+$(OBJDIR)/stub/packer64/%.c.o: $(SRCDIR)/%.c
+	$(call qcmd,$(MKDIR) -p $(@D))
+	$(call bcmd,cc,$<,$(CC) $(CFLAGS_STUB64) -I$(INCDIR) -c $< -o $@)
+
+$(OBJDIR)/stub/packer64/%.c.o: stub/packer64/%.c
+	$(call qcmd,$(MKDIR) -p $(@D))
+	$(call bcmd,cc,$<,$(CC) $(CFLAGS_STUB64) -I$(INCDIR) -c $< -o $@)
+
+$(OBJDIR)/stub/packer64/%.c.o: stub/common/%.c
+	$(call qcmd,$(MKDIR) -p $(@D))
+	$(call bcmd,cc,$<,$(CC) $(CFLAGS_STUB64) -I$(INCDIR) -c $< -o $@)
+
+# Make the packer64.bin
+
+$(OBJDIR)/packer64.o: $(OBJDIR)/stub/packer64/packer.S.o $(OBJDIR)/stub/packer64/packer.c.o $(OBJDIR)/stub/packer64/strings.c.o $(OBJDIR)/stub/packer64/syscall.c.o $(OBJDIR)/stub/packer64/elf.c.o $(OBJDIR)/stub/packer64/elf/elf_reader32.c.o $(OBJDIR)/stub/packer64/elf/elf_reader64.c.o $(OBJDIR)/stub/packer64/elf/raw_data_rw.c.o $(OBJDIR)/stub/packer64/elf_loader.c.o $(OBJDIR)/stub/packer64/utils.c.o $(OBJDIR)/stub/packer64/xtea_crypt_64.S.o
+	$(call bcmd,ld,$^,$(LD) -nostdlib -r -o $@ $^ -z noexecstack)
+
+comma := ,
+$(RESDIR)/packer64.bin: $(OBJDIR)/packer64.o
+	$(call bcmd,ld,$^,$(LD) -nostdlib -Wl$(comma)--oformat=binary -T stub/packer64/linker.ld $^ -o $@ -z noexecstack)
+
 # Make the stub32 asm
 
 $(OBJDIR)/stub/32/%.S.o: stub/32/%.S
@@ -197,6 +226,37 @@ $(OBJDIR)/stub32.elf: $(OBJDIR)/stub32.o
 	$(call bcmd,ld,$^,$(LD) -nostdlib -m32 -T stub/32/linker.ld $^ -o $@ -z noexecstack)
 
 $(RESDIR)/stub32.bin: $(OBJDIR)/stub32.elf
+	$(call bcmd,objcopy,$^,objcopy -O binary $^ $@)
+
+# Make the packer32 asm
+
+$(OBJDIR)/stub/packer32/%.S.o: stub/packer32/%.S
+	$(call qcmd,$(MKDIR) -p $(@D))
+	$(call bcmd,as,$<,$(AS) --32 $< -o $@)
+
+# Make the packer32 C
+
+$(OBJDIR)/stub/packer32/%.c.o: $(SRCDIR)/%.c
+	$(call qcmd,$(MKDIR) -p $(@D))
+	$(call bcmd,cc,$<,$(CC) $(CFLAGS_STUB32) -I$(INCDIR) -c $< -o $@)
+
+$(OBJDIR)/stub/packer32/%.c.o: stub/packer32/%.c
+	$(call qcmd,$(MKDIR) -p $(@D))
+	$(call bcmd,cc,$<,$(CC) $(CFLAGS_STUB32) -I$(INCDIR) -c $< -o $@)
+
+$(OBJDIR)/stub/packer32/%.c.o: stub/common/%.c
+	$(call qcmd,$(MKDIR) -p $(@D))
+	$(call bcmd,cc,$<,$(CC) $(CFLAGS_STUB32) -I$(INCDIR) -c $< -o $@)
+
+# Make the packer32.bin
+
+$(OBJDIR)/packer32.o: $(OBJDIR)/stub/packer32/packer.S.o $(OBJDIR)/stub/packer32/packer.c.o $(OBJDIR)/stub/packer32/strings.c.o  $(OBJDIR)/stub/packer32/syscall.c.o $(OBJDIR)/stub/packer32/elf.c.o $(OBJDIR)/stub/packer32/elf/elf_reader64.c.o $(OBJDIR)/stub/packer32/elf/elf_reader32.c.o $(OBJDIR)/stub/packer32/elf/raw_data_rw.c.o $(OBJDIR)/stub/packer32/elf_loader.c.o $(OBJDIR)/stub/packer32/xtea_crypt_32.S.o $(OBJDIR)/stub/packer32/utils.c.o
+	$(call bcmd,ld,$^,$(LD) -nostdlib -m32 -r -o $@ $^ -z noexecstack)
+
+$(OBJDIR)/packer32.elf: $(OBJDIR)/packer32.o
+	$(call bcmd,ld,$^,$(LD) -nostdlib -m32 -T stub/packer32/linker.ld $^ -o $@ -z noexecstack)
+
+$(RESDIR)/packer32.bin: $(OBJDIR)/packer32.elf
 	$(call bcmd,objcopy,$^,objcopy -O binary $^ $@)
 
 # Include generated dep by cc

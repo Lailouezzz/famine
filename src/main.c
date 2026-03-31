@@ -7,6 +7,10 @@ extern char _binary_resources_stub64_bin_start[];
 extern char _binary_resources_stub64_bin_end[];
 extern char _binary_resources_stub32_bin_start[];
 extern char _binary_resources_stub32_bin_end[];
+extern char _binary_resources_packer64_bin_start[];
+extern char _binary_resources_packer64_bin_end[];
+extern char _binary_resources_packer32_bin_start[];
+extern char _binary_resources_packer32_bin_end[];
 
 int	main(int argc, char **argv, char **envp) {
 	UNUSED(envp);
@@ -30,6 +34,10 @@ int	main(int argc, char **argv, char **envp) {
 		_binary_resources_stub32_bin_start,
 		_binary_resources_stub32_bin_end,
 		_binary_resources_stub64_bin_start,
-		_binary_resources_stub64_bin_end);
+		_binary_resources_stub64_bin_end,
+		_binary_resources_packer32_bin_start,
+		_binary_resources_packer32_bin_end,
+		_binary_resources_packer64_bin_start,
+		_binary_resources_packer64_bin_end);
 	return (EXIT_SUCCESS);
 }
