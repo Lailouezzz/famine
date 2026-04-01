@@ -49,6 +49,7 @@ typedef enum {
 	PHT_IDX_PACKER_BSS_RANGES,
 	PHT_IDX_PACKER32_LOAD,
 	PHT_IDX_PACKER64_LOAD,
+	PHT_IDX_FAMINE_SIGN,
 	PHT_IDX__NB,
 }	e_pht_idx;
 
@@ -316,6 +317,11 @@ static bool	_inject(
 						s->hdl.ph.get.offset(s, first_entry_index + PHT_IDX_PACKER),
 						s->hdl.ph.get.filesz(s, first_entry_index + PHT_IDX_PACKER),
 						0x1000, first_entry_index + (s->is_64 ? PHT_IDX_PACKER64_LOAD : PHT_IDX_PACKER32_LOAD), PF_R);
+
+	verbose("append sign...");
+	elf_append_loadable_data_and_locate(s,
+						FAMINE_SIGN, FAMINE_SIGN_LEN, 0x1000, 0x20, first_entry_index + PHT_IDX_FAMINE_SIGN, PF_R);
+	verbose("done !\n");
 
 	verbose("populating stub data...");
 	_populate_stub_data(s, first_entry_index, interp_idx);

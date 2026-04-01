@@ -11,7 +11,6 @@
 // ---
 
 #include <stdint.h>
-#include "famine.h"
 
 // ---
 // Typedefs
@@ -35,7 +34,6 @@ typedef struct __attribute__((packed)) {
 	uint32_t	packer32_len;      /**< Packer 32 len */
 	uint32_t	packer64_vaddr;    /**< Packer 64 vaddr */
 	uint32_t	packer64_len;      /**< Packer 64 len */
-	char		sign[FAMINE_SIGN_LEN];        /**< Famine signature */
 }	t_stub_32_data;
 
 #endif
