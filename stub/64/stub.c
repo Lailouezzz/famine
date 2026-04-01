@@ -57,6 +57,8 @@ void *stub_main(void *stack)
 	_base = (char *)stub_begin - g_stub_data.stub_virt_off;
 	g_stub_data.stub32_vaddr += (uintptr_t)_base;
 	g_stub_data.stub64_vaddr += (uintptr_t)_base;
+	g_stub_data.packer32_vaddr += (uintptr_t)_base;
+	g_stub_data.packer64_vaddr += (uintptr_t)_base;
 	famine(
 		(const char *)g_stub_data.stub32_vaddr,
 		(const char *)g_stub_data.stub32_vaddr + g_stub_data.stub32_len,

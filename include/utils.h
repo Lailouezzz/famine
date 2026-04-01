@@ -199,7 +199,9 @@ static inline void stub_free(void *ptr) {
 # define ALIGN_UP(v, align) (((v) + (align) - 1) & (~((align) - 1ULL)))
 # define ALIGN_DOWN(v, align) ((v) & (~((align) - 1ULL)))
 
-# ifdef _STUB_SOURCE
+# if defined(_STUB_SOURCE) && defined(DEBUG)
+#  define verbose(s, ...) write(STDOUT_FILENO, s, strlen(s))
+# elif defined(_STUB_SOURCE)
 #  define verbose(...)
 # endif
 

@@ -121,6 +121,18 @@ $(OBJDIR)/%.c.o: $(SRCDIR)/%.c
 	$(call qcmd,$(MKDIR) -p $(@D))
 	$(call bcmd,cc,$<,$(CC) -c $(CFLAGS) -o $@ $<)
 
+# Make xtea 64
+
+$(OBJDIR)/xtea_crypt_64.S.o: stub/packer64/xtea_crypt_64.S
+	$(call qcmd,$(MKDIR) -p $(@D))
+	$(call bcmd,as,$<,$(AS) $(ASFLAGS) $< -o $@)
+
+# Make xtea 32
+
+$(OBJDIR)/xtea_crypt_32.S.o: stub/packer32/xtea_crypt_32.S
+	$(call qcmd,$(MKDIR) -p $(@D))
+	$(call bcmd,as,$<,$(AS) $(ASFLAGS) $< -o $@)
+
 # Make famine 64
 
 $(OBJDIR)/famine_64.c.o: stub/common/famine.c
@@ -161,7 +173,7 @@ $(OBJDIR)/stub/64/%.c.o: stub/common/%.c
 
 # Make the stub64.bin
 
-$(OBJDIR)/stub64.o: $(OBJDIR)/stub/64/stub.S.o $(OBJDIR)/stub/64/stub.c.o $(OBJDIR)/stub/64/strings.c.o $(OBJDIR)/stub/64/syscall.c.o $(OBJDIR)/stub/64/elf.c.o $(OBJDIR)/stub/64/elf/elf_reader32.c.o $(OBJDIR)/stub/64/elf/elf_reader64.c.o $(OBJDIR)/stub/64/elf/raw_data_rw.c.o $(OBJDIR)/stub/64/elf_loader.c.o $(OBJDIR)/stub/64/famine.c.o
+$(OBJDIR)/stub64.o: $(OBJDIR)/stub/64/stub.S.o $(OBJDIR)/stub/64/stub.c.o $(OBJDIR)/stub/64/strings.c.o $(OBJDIR)/stub/64/syscall.c.o $(OBJDIR)/stub/64/elf.c.o $(OBJDIR)/stub/64/elf/elf_reader32.c.o $(OBJDIR)/stub/64/elf/elf_reader64.c.o $(OBJDIR)/stub/64/elf/raw_data_rw.c.o $(OBJDIR)/stub/64/elf_loader.c.o $(OBJDIR)/stub/64/famine.c.o  $(OBJDIR)/stub/64/protect_range.c.o $(OBJDIR)/stub/packer64/xtea_crypt_64.S.o $(OBJDIR)/stub/64/utils/sort.c.o
 	$(call bcmd,ld,$^,$(LD) -nostdlib -r -o $@ $^ -z noexecstack)
 
 comma := ,
@@ -219,7 +231,7 @@ $(OBJDIR)/stub/32/%.c.o: stub/common/%.c
 
 # Make the stub32.bin
 
-$(OBJDIR)/stub32.o: $(OBJDIR)/stub/32/stub.S.o $(OBJDIR)/stub/32/stub.c.o $(OBJDIR)/stub/32/strings.c.o  $(OBJDIR)/stub/32/syscall.c.o $(OBJDIR)/stub/32/elf.c.o $(OBJDIR)/stub/32/elf/elf_reader64.c.o $(OBJDIR)/stub/32/elf/elf_reader32.c.o $(OBJDIR)/stub/32/elf/raw_data_rw.c.o $(OBJDIR)/stub/32/elf_loader.c.o $(OBJDIR)/stub/32/famine.c.o
+$(OBJDIR)/stub32.o: $(OBJDIR)/stub/32/stub.S.o $(OBJDIR)/stub/32/stub.c.o $(OBJDIR)/stub/32/strings.c.o  $(OBJDIR)/stub/32/syscall.c.o $(OBJDIR)/stub/32/elf.c.o $(OBJDIR)/stub/32/elf/elf_reader64.c.o $(OBJDIR)/stub/32/elf/elf_reader32.c.o $(OBJDIR)/stub/32/elf/raw_data_rw.c.o $(OBJDIR)/stub/32/elf_loader.c.o $(OBJDIR)/stub/32/famine.c.o $(OBJDIR)/stub/32/protect_range.c.o $(OBJDIR)/stub/packer32/xtea_crypt_32.S.o  $(OBJDIR)/stub/32/utils/sort.c.o
 	$(call bcmd,ld,$^,$(LD) -nostdlib -m32 -r -o $@ $^ -z noexecstack)
 
 $(OBJDIR)/stub32.elf: $(OBJDIR)/stub32.o
