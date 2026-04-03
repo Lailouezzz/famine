@@ -53,16 +53,5 @@ _start:
 	add rsp, 8
 
 	mov [rsp + 128], rax
-
-	mov rax, 1
-	mov rdi, 1
-	lea rsi, [rip + msg]
-	mov rdx, 14
-	syscall
-
 	popall
 	ret
-
-.section .rodata
-msg:
-	.ascii "....WOODY....\n"

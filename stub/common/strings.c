@@ -27,6 +27,19 @@ int	strcmp(const char *s1, const char *s2)
 	return *s1 - *s2;
 }
 
+/** @brief Compare strings. */
+int	strncmp(const char *s1, const char *s2, size_t len)
+{
+	size_t	k = 1;
+
+	while (*s1 && *s2 && k < len) {
+		++s1;
+		++s2;
+		++k;
+	}
+	return *s1 - *s2;
+}
+
 /** @brief Copy memory. */
 void	*memcpy(void *restrict dst, const void *restrict src, size_t n)
 {

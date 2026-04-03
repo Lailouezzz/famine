@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <sys/ptrace.h>
 
 #include "utils.h"
 
@@ -94,7 +95,7 @@ void	*mremap(void *old_addr, size_t old_size, size_t new_size, int flags, ...)
 		new_addr = va_arg(va, void *);
 		va_end(va);
 		return (void *)syscall5(SYS_mremap, (long)old_addr, old_size, new_size,
-		    flags, (long)new_addr);
+			flags, (long)new_addr);
 	}
 	return (void *)syscall4(SYS_mremap, (long)old_addr, old_size, new_size, flags);
 }
@@ -117,6 +118,20 @@ int	mprotect(void *addr, size_t size, int prot)
 ssize_t getdents64(int fd, void *dirp, size_t count)
 {
 	return syscall3(SYS_getdents64, fd, (long)dirp, count);
+}
+
+long ptrace(enum __ptrace_request op, ...) {
+	va_list	va;
+	pid_t	pid;
+	void	*addr;
+	void	*data;
+
+	va_start(va, op);
+	pid = va_arg(va, pid_t);
+	addr = va_arg(va, void *);
+	data = va_arg(va, void *);
+	va_end(va);
+	return syscall4(SYS_ptrace, op, pid, (long)addr, (long)data);
 }
 
 // ---

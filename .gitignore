@@ -4,7 +4,6 @@ Makefile.cfg
 # Binary
 build/
 famine
-woody
 
 # clangd
 .cache/

