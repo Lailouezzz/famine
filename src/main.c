@@ -21,7 +21,9 @@ int	main(int argc, char **argv, char **envp) {
 	while ((opt = getopt(argc, argv, "v")) != -1) {
 		switch (opt) {
 			case 'v':
+#ifdef DEBUG
 				set_verbose(true);
+#endif
 				break ;
 		break;
 			default:
