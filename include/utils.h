@@ -215,6 +215,8 @@ TYPEDEF_LIST(char, bytes);
 // Function declarations
 // ---
 
+# ifdef DEBUG
+
 /**
  * @brief Print error message with program name.
  * @param fmt printf-style format string.
@@ -229,7 +231,7 @@ void	error_msg(const char *fmt, ...);
  */
 void	perror_msg(const char *fmt, ...);
 
-# ifndef _STUB_SOURCE
+#  ifndef _STUB_SOURCE
 
 /**
  * @brief Print verbose message if verbose mode is enabled.
@@ -238,13 +240,19 @@ void	perror_msg(const char *fmt, ...);
  */
 void	verbose(const char *fmt, ...);
 
-# endif
+#  endif
 
 /**
  * @brief Enable verbose
  * @param verbose
  */
 void	set_verbose(bool verbose);
+
+# else
+#  define verbose(...)
+#  define perror_msg(...)
+#  define error_msg(...)
+# endif
 
 /**
  * @brief Set the global program name
@@ -259,6 +267,7 @@ void	quicksort(
 			size_t len,
 			int(*cmp)(const void*, const void*)
 			);
+
 
 // ---
 // Static inline function

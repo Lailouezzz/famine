@@ -23,6 +23,8 @@ static const char	*_pn = nullptr;
 // Extern function definitions
 // ---
 
+#ifdef DEBUG
+
 void	verbose(
 			const char *fmt, ...
 			) {
@@ -58,6 +60,8 @@ void	perror_msg(
 	va_end(args);
 	fprintf(stderr, ": %s\n", strerror(errno));
 }
+
+#endif
 
 void	set_verbose(bool verbose) {
 	_verbose = verbose;
