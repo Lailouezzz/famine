@@ -11,7 +11,7 @@
 // Defines
 // ---
 
-#define FAMINE_SIGN "Pestilence version 1.0 (c)oded by ale-boud - amassias"
+#define FAMINE_SIGN "Famine version 1.0 (c)oded by ale-boud - amassias"
 #define FAMINE_SIGN_LEN 54
 
 // ---

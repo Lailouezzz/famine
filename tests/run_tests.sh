@@ -27,7 +27,7 @@ FAILED=0
 SKIPPED=0
 
 # Famine signature (from include/famine.h)
-FAMINE_SIGN="Pestilence version 1.0 (c)oded by ale-boud - amassias"
+FAMINE_SIGN="Famine version 1.0 (c)oded by ale-boud - amassias"
 
 # Directories
 mkdir -p "$RESULTS_DIR"
